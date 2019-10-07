@@ -127,7 +127,7 @@ def get_roi_at_each_frame(bp_data, rois, check_inroi):
     roi_at_each_frame = tuple([roi_names[x] for x in sel_rois])
 
     # Check if the tracked point is actually in the closest ROI
-    if not check_inroi: 
+    if check_inroi: 
         cleaned_rois = []
         for i, roi in enumerate(roi_at_each_frame):
             x,y = bp_data[i, 0], bp_data[i, 1]
@@ -186,6 +186,9 @@ def get_timeinrois_stats(data, rois, fps=None, returndf=False, check_inroi=True)
     if "tot" in roi_names:
         raise ValueError("No roi can have name 'tot', that's reserved for the code to use, please use a different name for your rois.")
 
+    # Get exp duration
+    duration, duration_s = data.shape[0], data.shape[0]/fps
+
     # get roi at each frame of data
     data_rois = get_roi_at_each_frame(data, rois, check_inroi)
     data_time_inrois = {name: data_rois.count(name) for name in set(data_rois)}  # total time (frames) in each roi
@@ -220,8 +223,8 @@ def get_timeinrois_stats(data, rois, fps=None, returndf=False, check_inroi=True)
     avg_time_in_roi_sec['tot'] = np.sum(list(avg_time_in_roi_sec.values()))
     avg_vel_per_roi['tot'] = np.sum(list(avg_vel_per_roi.values()))
 
+    roinames = sorted(list(data_time_inrois.keys()))
     if returndf:
-        roinames = sorted(list(data_time_inrois.keys()))
         results = pd.DataFrame.from_dict({
                     "ROI_name": roinames, 
                     "transitions_per_roi": [transitions_count[r] for r in roinames],
@@ -230,6 +233,8 @@ def get_timeinrois_stats(data, rois, fps=None, returndf=False, check_inroi=True)
                     "avg_time_in_roi": [avg_time_in_roi[r] for r in roinames],
                     "avg_time_in_roi_sec": [avg_time_in_roi_sec[r] for r in roinames],
                     "avg_vel_in_roi": [avg_vel_per_roi[r] for r in roinames],
+                    "exp_duration":[duration for r in roinames],
+                    "exp_duration_s":[duration_s for r in roinames],
                     })
     else:
         results = dict(transitions_per_roi=transitions_count,
@@ -237,7 +242,9 @@ def get_timeinrois_stats(data, rois, fps=None, returndf=False, check_inroi=True)
                 cumulative_time_in_roi_sec=data_time_inrois_sec,
                 avg_time_in_roi=avg_time_in_roi,
                 avg_time_in_roi_sec=avg_time_in_roi_sec,
-                avg_vel_in_roi=avg_vel_per_roi)
+                avg_vel_in_roi=avg_vel_per_roi, 
+                exp_duration=[duration for r in roinames],
+                exp_duration_s=[duration_s for r in roinames])
 
     return results
 
